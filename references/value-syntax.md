@@ -24,7 +24,7 @@
 
 | Type | .ubridge | Example |
 |------|----------|---------|
-| Asset ref | `{fileID, guid}` | `{21300000, e197d4e89f9f4274}` |
+| Asset ref | `{fileID, guid, type}` | `{21300000, e197d4e89f9f4274, 2}` |
 | Internal ref | `{fileID}` | `{8027481463030904456}` |
 | Component ref | `->GOPath:Component` | `->Button_Text:TextMeshProUGUI` |
 | Null | `null` | `null` |

@@ -1,6 +1,6 @@
 ---
 name: unity-prefab
-description: Read, understand, and edit Unity prefab files (.prefab) using the ubridge CLI. Use when asked to inspect prefab hierarchy, modify prefab components/properties, create or restructure GameObjects in a prefab, or understand a prefab's structure. Triggers on Unity prefab editing, prefab inspection, GameObject hierarchy, component modification, nested prefab analysis. Requires the `ubridge` CLI (npm i -g unity-yaml-bridge).
+description: Read, understand, and edit Unity prefab files (.prefab) using the ubridge CLI. Use when asked to inspect prefab hierarchy, modify prefab components/properties, create or restructure GameObjects in a prefab, or understand a prefab's structure. Triggers on Unity prefab editing, prefab inspection, GameObject hierarchy, component modification, nested prefab analysis. Requires the `ubridge` CLI (npm i -g github:yulcat/unity-yaml-bridge).
 ---
 
 # Unity Prefab Editing
@@ -99,6 +99,8 @@ ubridge write <edited.ubridge> --yaml <original.prefab> -o <output.prefab>
 
 The `--yaml` flag provides the original prefab for merging. New GameObjects/components get auto-generated fileIDs.
 
+Note: `--yaml` must point to the **original** prefab. The `-o` can overwrite it safely because ubridge reads the original fully before writing.
+
 ## Examples
 
 ### Inspect a prefab hierarchy
@@ -107,14 +109,12 @@ The `--yaml` flag provides the original prefab for merging. New GameObjects/comp
 ubridge parse Assets/Prefabs/Player.prefab --project . | head -20
 ```
 
-Read just the STRUCTURE section to understand the hierarchy without loading full details.
-
 ### Change a sprite reference
 
 ```bash
-ubridge parse Assets/Prefabs/Card.prefab --project . -o card.ubridge
-# Edit card.ubridge: change m_Sprite GUID
-ubridge write card.ubridge --yaml Assets/Prefabs/Card.prefab -o Assets/Prefabs/Card.prefab
+ubridge parse Assets/Prefabs/Card.prefab --project . -o /tmp/card.ubridge
+# Edit /tmp/card.ubridge: change m_Sprite GUID
+ubridge write /tmp/card.ubridge --yaml Assets/Prefabs/Card.prefab -o Assets/Prefabs/Card.prefab
 ```
 
 ### Batch inspect all prefabs
