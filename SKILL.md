@@ -9,7 +9,11 @@ Edit Unity prefab files through the `ubridge` CLI, which converts Unity's verbos
 
 ## Prerequisites
 
-- `ubridge` CLI installed globally: `npm i -g unity-yaml-bridge`
+- `ubridge` CLI installed globally:
+  ```bash
+  git clone https://github.com/yulcat/unity-yaml-bridge.git
+  cd unity-yaml-bridge && npm install && npm link
+  ```
 - Know the Unity project root path (needed for GUID resolution)
 
 ## Core Workflow
