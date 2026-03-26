@@ -72,6 +72,9 @@ m_Type = 3
 
 - Path format: `GOPath:ComponentType`
 - Only non-default values shown
+- Internal references: `->GOPath:Component` (readable path instead of raw fileID)
+- `@GOPath:Component` is an alias for `->` (use either when editing)
+- External references: `{fileID, guid}` (cross-asset references)
 - See references/value-syntax.md for all value types
 
 #### REFS — fileID Map (Do Not Edit)
@@ -83,6 +86,7 @@ Tool-only section for lossless write-back. Ignore completely.
 Edit STRUCTURE and DETAILS sections as needed:
 
 - **Change a property**: Modify the value in DETAILS
+- **Set a reference**: Use `->GOPath:Component` or `@GOPath:Component` to point to an object in the same prefab
 - **Add a component**: Add a new `[GOPath:ComponentType]` section in DETAILS
 - **Add a GameObject**: Add it to STRUCTURE with `+ ` prefix and add DETAILS
 - **Remove a GameObject**: Mark with `- ` prefix in STRUCTURE
