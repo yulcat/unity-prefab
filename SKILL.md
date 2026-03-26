@@ -11,6 +11,10 @@ Edit Unity prefab files through the `ubridge` CLI, which converts Unity's verbos
 
 - `ubridge` CLI installed globally:
   ```bash
+  npm i -g github:yulcat/unity-yaml-bridge
+  ```
+  If install fails, clone manually:
+  ```bash
   git clone https://github.com/yulcat/unity-yaml-bridge.git
   cd unity-yaml-bridge && npm install && npm link
   ```
