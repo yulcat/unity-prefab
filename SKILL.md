@@ -99,7 +99,7 @@ m_Type = 3
 
 #### REFS — fileID Map (Do Not Edit)
 
-Tool-only section for lossless write-back. AI agents should **ignore** this section entirely.
+Tool-only section for lossless write-back. AI agents should **not modify** REFS entries, but **must consult REFS** when writing `->` path references — the REFS keys are the only valid reference targets.
 
 ### 3. Edit the .ubridge File
 
@@ -138,43 +138,54 @@ These mean "this field points to the TextMeshProUGUI component on the Button_Tex
 
 ### Writing Path References
 
-When editing, use the same syntax to set references:
-```ini
-# Point to a specific component on a GO
-myTarget = ->Canvas/Panel/Button:Image
+When editing, use `->` references — but **only use keys that already exist in the REFS section**. Do NOT invent paths.
 
-# Point to a GO (its Transform)
+```ini
+# ✅ Correct — these keys exist in REFS
+activateDisplayText = ->Button_Text:TextMeshProUGUI
 moveTarget = ->Waypoint:Transform
 
-# Array of references
-targets = [->Enemy1, ->Enemy2, ->Enemy3]
+# ❌ WRONG — do not construct paths from the STRUCTURE tree
+activateDisplayText = ->Canvas/Panel/Button_Text:TextMeshProUGUI
 ```
+
+**Critical rule**: The `->` value must **exactly match a key in the REFS section**. The REFS section lists all valid reference targets. Before writing a `->` reference, look up the REFS section and use the exact key string.
+
+### How to find the right key
+
+1. Look at the `--- REFS` section at the bottom of the file
+2. Find the target component (e.g., `Button_Text:TextMeshProUGUI = 12345`)
+3. Use exactly that key: `->Button_Text:TextMeshProUGUI`
 
 ### Path Reference Rules
 
 | Pattern | Resolves To |
 |---------|-------------|
-| `->GOName:Component` | The Component on that GO |
-| `->Parent/Child:Component` | Nested path to the Component |
-| `->GOName` | Shorthand for the GO's Transform |
-| `@GOPath:Component` | Alias for `->` (both work identically) |
+| `->Name:Component` | The Component on that GO (key from REFS) |
+| `->Name` | Shorthand for the GO (resolves to its fileID) |
+| `@Name:Component` | Alias for `->` (both work identically) |
 | `[->A, ->B:Image]` | Array of internal references |
 
 **Important**: Path references only work for objects **within the same prefab** (including expanded nested prefab children). Cross-asset references still use `{fileID, guid}` format.
 
 ### Nested Prefab References
 
-Components inside nested prefab instances are included in the REFS map, so you can reference them by path:
+Components inside nested prefab instances are also listed in the REFS section:
 
+```
+--- REFS
+...
+_Header_Text:TextMeshProUGUI = 7213628277689136018
+small circle:MedalDisplayUI = 6683245448512787790
+```
+
+Use these keys directly:
 ```ini
-# Reference a component inside a nested prefab instance
-headerText = ->_Header_Text/Text:TextMeshProUGUI
-
-# Reference the nested prefab instance's own component
+headerText = ->_Header_Text:TextMeshProUGUI
 medalDisplay = ->small circle:MedalDisplayUI
 ```
 
-Stripped MonoBehaviour entries from nested prefabs are grouped with their parent GO in REFS to enable these references.
+**Never construct paths by joining STRUCTURE tree nodes with `/`.** Only use keys from REFS.
 
 ---
 
