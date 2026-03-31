@@ -23,6 +23,8 @@ If install fails: `git clone https://github.com/yulcat/unity-yaml-bridge.git && 
 ubridge parse <file.prefab> --project <unity-root> -o /tmp/edit.ubridge
 
 # 2. Edit the .ubridge file (STRUCTURE and DETAILS sections)
+#    When adding new components, write all serialized fields explicitly.
+#    ubridge does NOT auto-populate defaults like the Unity Editor.
 
 # 3. Write back (-o can safely overwrite the original)
 ubridge write /tmp/edit.ubridge --yaml <file.prefab> -o <file.prefab>
