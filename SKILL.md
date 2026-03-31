@@ -28,7 +28,7 @@ Edit Unity prefab files through the `ubridge` CLI, which converts Unity's verbos
 ubridge parse <file.prefab> --project <unity-project-root> -o <output.ubridge>
 ```
 
-The `--project` flag resolves GUIDs to human-readable names (script names, prefab names, sprite names). Always use it when the Unity project is available.
+The `--project` flag resolves GUIDs to human-readable names (script names, prefab names, sprite names) **and expands nested prefab hierarchies recursively**. Always use it when the Unity project is available.
 
 ### 2. Understand the Output
 
@@ -60,6 +60,29 @@ PlayerUI [PlayerController, Health]
 | `Comp*` | Overridden in this variant |
 | `+ GOName` | Added in this variant |
 | `- GOName` | Removed in this variant |
+| `GOName#N` | Name collision — sibling GOs with same name get `#1`, `#2`, etc. |
+
+#### Nested Prefab Expansion
+
+When `--project` is provided, nested prefab instances (`{PrefabName}`) are **recursively expanded** — the full child hierarchy from the source prefab is inlined at the correct tree depth:
+
+```
+_Card_Template [CameraFacingBillboard, CardBehaviour]
+├─ Frame [Image]
+├─ _Header_Text {_Header_Text}
+│  └─ Text [TextMeshProUGUI*]
+└─ small circle {Medal_Template} [MedalDisplayUI*, Animator]
+   ├─ Circle_Image [Image*]
+   ├─ Small_Circle_Image [Image*]
+   └─ ActivationParticles_Template {ActivationParticles_Template}
+      ├─ Burst_UIParticles [UIParticles*]
+      └─ Activated_UIParticles [UIParticles*]
+```
+
+- Children of nested prefabs appear indented under the instance node
+- `*` markers on components = overridden in this prefab
+- Expansion is recursive (nested-in-nested prefabs also expand)
+- Cycle detection prevents infinite loops
 
 #### DETAILS — Component Properties
 
@@ -72,21 +95,18 @@ m_Type = 3
 
 - Path format: `GOPath:ComponentType`
 - Only non-default values shown
-- Internal references: `->GOPath:Component` (readable path instead of raw fileID)
-- `@GOPath:Component` is an alias for `->` (use either when editing)
-- External references: `{fileID, guid}` (cross-asset references)
-- See references/value-syntax.md for all value types
+- See [Value Syntax Reference](#value-syntax-reference) for all types
 
 #### REFS — fileID Map (Do Not Edit)
 
-Tool-only section for lossless write-back. Ignore completely.
+Tool-only section for lossless write-back. AI agents should **ignore** this section entirely.
 
 ### 3. Edit the .ubridge File
 
 Edit STRUCTURE and DETAILS sections as needed:
 
 - **Change a property**: Modify the value in DETAILS
-- **Set a reference**: Use `->GOPath:Component` or `@GOPath:Component` to point to an object in the same prefab
+- **Set a reference**: Use `->GOPath:Component` to point to an object in the same prefab
 - **Add a component**: Add a new `[GOPath:ComponentType]` section in DETAILS
 - **Add a GameObject**: Add it to STRUCTURE with `+ ` prefix and add DETAILS
 - **Remove a GameObject**: Mark with `- ` prefix in STRUCTURE
@@ -97,38 +117,70 @@ Edit STRUCTURE and DETAILS sections as needed:
 ubridge write <edited.ubridge> --yaml <original.prefab> -o <output.prefab>
 ```
 
-The `--yaml` flag provides the original prefab for merging. New GameObjects/components get auto-generated fileIDs.
+The `--yaml` flag provides the original prefab for merging. `-o` can safely overwrite the original because ubridge reads the full file before writing.
 
-Note: `--yaml` must point to the **original** prefab. The `-o` can overwrite it safely because ubridge reads the original fully before writing.
+---
 
-## Examples
+## Path References (`->` syntax)
 
-### Inspect a prefab hierarchy
+This is the key feature for readable cross-references within a prefab. Instead of opaque `{fileID}` numbers, references use human-readable paths.
 
-```bash
-ubridge parse Assets/Prefabs/Player.prefab --project . | head -20
+### Reading Path References
+
+In the DETAILS section, internal references appear as:
+```ini
+activateDisplayText = ->Button_Text:TextMeshProUGUI
+attackRoot = ->MouthEnd:Transform
+targetGraphic = ->Background:Image
 ```
 
-### Change a sprite reference
+These mean "this field points to the TextMeshProUGUI component on the Button_Text GameObject" etc.
 
-```bash
-ubridge parse Assets/Prefabs/Card.prefab --project . -o /tmp/card.ubridge
-# Edit /tmp/card.ubridge: change m_Sprite GUID
-ubridge write /tmp/card.ubridge --yaml Assets/Prefabs/Card.prefab -o Assets/Prefabs/Card.prefab
+### Writing Path References
+
+When editing, use the same syntax to set references:
+```ini
+# Point to a specific component on a GO
+myTarget = ->Canvas/Panel/Button:Image
+
+# Point to a GO (its Transform)
+moveTarget = ->Waypoint:Transform
+
+# Array of references
+targets = [->Enemy1, ->Enemy2, ->Enemy3]
 ```
 
-### Batch inspect all prefabs
+### Path Reference Rules
 
-```bash
-find Assets -name "*.prefab" | while read f; do
-  echo "=== $f ==="
-  ubridge parse "$f" --project . 2>/dev/null | sed -n '/^--- STRUCTURE/,/^--- DETAILS/p' | head -20
-done
+| Pattern | Resolves To |
+|---------|-------------|
+| `->GOName:Component` | The Component on that GO |
+| `->Parent/Child:Component` | Nested path to the Component |
+| `->GOName` | Shorthand for the GO's Transform |
+| `@GOPath:Component` | Alias for `->` (both work identically) |
+| `[->A, ->B:Image]` | Array of internal references |
+
+**Important**: Path references only work for objects **within the same prefab** (including expanded nested prefab children). Cross-asset references still use `{fileID, guid}` format.
+
+### Nested Prefab References
+
+Components inside nested prefab instances are included in the REFS map, so you can reference them by path:
+
+```ini
+# Reference a component inside a nested prefab instance
+headerText = ->_Header_Text/Text:TextMeshProUGUI
+
+# Reference the nested prefab instance's own component
+medalDisplay = ->small circle:MedalDisplayUI
 ```
+
+Stripped MonoBehaviour entries from nested prefabs are grouped with their parent GO in REFS to enable these references.
+
+---
 
 ## Variant Prefabs
 
-Variants show only overrides relative to the base:
+Variants show overrides relative to the base prefab. When the base can be resolved, the full inherited tree is shown.
 
 ```
 # ubridge v1 | variant | base-guid:abc123...
@@ -148,13 +200,96 @@ m_Sprite = {21300000, shield-guid-here}
 - `*` marks overridden components
 - `+` marks added GameObjects
 - Only modified properties appear in DETAILS
+- Added GameObjects in variants are also properly handled in the REFS section
+
+---
+
+## MonoBehaviour GUID Resolution
+
+When `--project` is provided, custom MonoBehaviour scripts are resolved from GUIDs to their class names. Instead of seeing a raw GUID, you see the actual C# class name in the component list:
+
+```
+Player [PlayerController, Health, DamageDealer]
+```
+
+This works by looking up the script GUID in the project's `.meta` files and extracting the class name.
+
+---
+
+## Value Syntax Reference
+
+| Unity Type | .ubridge | Example |
+|------------|----------|---------|
+| int, float | literal | `5`, `0.42` |
+| bool | `0` / `1` | `1` |
+| string | literal | `Hello World` |
+| Vector2/3/4 | tuple | `(0.5, 0.5)`, `(1, 2, 3)` |
+| Color | `(r, g, b, a)` | `(1, 0.9, 0.3, 1)` |
+| Asset ref | `{fileID, guid}` | `{21300000, e197d4e8...}` |
+| Internal ref | `->Path:Component` | `->Button_Text:TextMeshProUGUI` |
+| Null | `null` | `null` |
+| Array | `[item1, item2]` | `[->GO1, ->GO2]` |
+| LayerMask | `bits:N` | `bits:512` |
+| AnimationCurve | `curve[...]` | `curve[(0, 1, 0, 0), (1, 0, 0, 0)]` |
+
+### Transform Shorthand
+
+```ini
+[Button:RectTransform]
+pos = (10, 20)              # anchoredPosition
+size = (200, 50)            # sizeDelta
+anchor = (0, 0)-(1, 1)     # anchorMin-anchorMax
+pivot = (0.5, 0.5)         # pivot
+scale = (1, 1, 1)          # localScale
+rot = (0, 45, 0)           # euler angles
+```
+
+### Complex Arrays
+
+```ini
+[Chomper:DamageDealer]
+attackPoints:
+  - radius = 0.42
+    offset = (0, 0, 0)
+    attackRoot = ->MouthEnd:Transform
+```
+
+See [references/value-syntax.md](references/value-syntax.md) for the complete reference.
+
+---
+
+## Examples
+
+### Inspect a prefab hierarchy
+```bash
+ubridge parse Assets/Prefabs/Player.prefab --project . | head -20
+```
+
+### Change a sprite reference
+```bash
+ubridge parse Assets/Prefabs/Card.prefab --project . -o /tmp/card.ubridge
+# Edit /tmp/card.ubridge: change m_Sprite GUID
+ubridge write /tmp/card.ubridge --yaml Assets/Prefabs/Card.prefab -o Assets/Prefabs/Card.prefab
+```
+
+### Batch inspect all prefabs
+```bash
+find Assets -name "*.prefab" | while read f; do
+  echo "=== $f ==="
+  ubridge parse "$f" --project . 2>/dev/null | sed -n '/^--- STRUCTURE/,/^--- DETAILS/p' | head -20
+done
+```
+
+### Rewire a reference inside a prefab
+```bash
+ubridge parse Assets/Prefabs/UI.prefab --project . -o /tmp/ui.ubridge
+# Edit: change targetGraphic = ->NewButton:Image
+ubridge write /tmp/ui.ubridge --yaml Assets/Prefabs/UI.prefab -o Assets/Prefabs/UI.prefab
+```
 
 ## Limitations
 
 - Scene files (`.unity`) not yet supported
 - Nested prefab internal components must be edited via the source prefab
+- Sibling GOs with identical names use `#N` disambiguation — path references skip ambiguous cases
 - Some complex AnimationCurve data may appear as raw values
-
-## Value Syntax Reference
-
-See [references/value-syntax.md](references/value-syntax.md) for the complete value type reference.
