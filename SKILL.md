@@ -10,7 +10,7 @@ Edit Unity prefab files through the `ubridge` CLI, which converts Unity's verbos
 ## Prerequisites
 
 ```bash
-npm i -g github:yulcat/unity-yaml-bridge
+npm i -g --install-links github:yulcat/unity-yaml-bridge
 ```
 If install fails: `git clone https://github.com/yulcat/unity-yaml-bridge.git && cd unity-yaml-bridge && npm install && npm link`
 

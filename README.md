@@ -29,7 +29,7 @@ git clone https://github.com/yulcat/unity-prefab ~/.claude/skills/unity-prefab
 This skill requires the `ubridge` CLI:
 
 ```bash
-npm i -g github:yulcat/unity-yaml-bridge
+npm i -g --install-links github:yulcat/unity-yaml-bridge
 ```
 
 The skill instructs the agent to install it automatically if missing.
