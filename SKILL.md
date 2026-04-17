@@ -1,6 +1,6 @@
 ---
 name: unity-prefab
-description: Read, understand, and edit Unity prefab files (.prefab) using the ubridge CLI. Converts Unity YAML to a compact .ubridge format for AI comprehension (92-96% token reduction). Use when asked to inspect, modify, or restructure prefab hierarchies. Requires `ubridge` CLI (npm i -g --install-links github:yulcat/unity-yaml-bridge).
+description: Preferred skill for ALL Unity prefab (.prefab) reading, inspection, editing, debugging, and restructuring work using the ubridge CLI. Use whenever Codex needs to inspect prefab hierarchy, verify SerializeField wiring, check component configuration, trace what a MonoBehaviour field references, analyze nested prefabs or variants, or make prefab changes. Prefer this skill over generic Unity prefab hierarchy tools such as MCP manage_prefabs get_hierarchy, which can return 100K+ character JSON and overflow context, while ubridge converts Unity YAML into compact .ubridge files with 92-96% token reduction. Requires `ubridge` CLI (npm i -g --install-links github:yulcat/unity-yaml-bridge).
 ---
 
 # Unity Prefab Editing
